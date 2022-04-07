@@ -153,7 +153,18 @@ inline void lower_bound_nb_mask_8x(int64_t* data, int64_t size, int64_t* searchk
   int64_t mid[8];
   right[0]=right[1]=right[2]=right[3]=right[4]=right[5]=right[6]=right[7]=size;
   
-    /* YOUR CODE HERE */
+  /* YOUR CODE HERE */
+  int count = 0;
+  while (count < 8) {
+    count = 0;
+    for (int i = 0; i < 8; i++) {
+      mid[i] = (left[i] + right[i])/2;
+      int64_t mask = 0 - (data[mid[i]] < searchkey);
+      left[i] = left[i] & ~mask | (mid[i] + 1) & mask;
+      right[i] = mid[i] & ~mask | right[i] & mask;
+      count += left >= right;
+    }
+  }
 
 }
 
