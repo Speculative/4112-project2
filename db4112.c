@@ -159,11 +159,19 @@ inline void lower_bound_nb_mask_8x(int64_t* data, int64_t size, int64_t* searchk
     count = 0;
     for (int i = 0; i < 8; i++) {
       mid[i] = (left[i] + right[i])/2;
-      int64_t mask = 0 - (data[mid[i]] < searchkey);
-      left[i] = left[i] & ~mask | (mid[i] + 1) & mask;
-      right[i] = mid[i] & ~mask | right[i] & mask;
-      count += left >= right;
+      int64_t mask = 0 - (data[mid[i]] < searchkey[i]);
+
+      int64_t newLeft = left[i] & ~mask | (mid[i] + 1) & mask;
+      int64_t newRight = mid[i] & ~mask | right[i] & mask;
+
+      int64_t done = newLeft >= newRight;
+      count += done;
+      int64_t continueMask = ~(0 - done);
+      left[i] = left[i] & ~continueMask | newLeft & continueMask;
+      right[i] = right[i] & ~continueMask | newRight & continueMask;
     }
+    printf("L: %ld, %ld, %ld, %ld, %ld, %ld, %ld, %ld\n", left[0], left[1], left[2], left[3], left[4], left[5], left[6], left[7], left[8]);
+    printf("R: %ld, %ld, %ld, %ld, %ld, %ld, %ld, %ld\n", right[0], right[1], right[2], right[3], right[4], right[5], right[6], right[7], right[8]);
   }
 
 }
@@ -264,6 +272,15 @@ void bulk_binary_search_8x(int64_t* data, int64_t size, int64_t* searchkeys, int
 
       // Algorithm A
        lower_bound_nb_mask_8x(data,size,&searchkeys[i],&results[i]);
+
+      for (int k = 0; k < 8; k++) {
+	  int64_t testResult = lower_bound_nb_mask(data,size,searchkeys[i + k]);
+	  if (testResult != results[i + k]) {
+            printf("Got %ld expected %ld\n", results[i + k], testResult);
+	  } else {
+	    printf("Ok\n");
+	  }
+      }
 
       // Algorithm B
       //searchkey_8x = _mm512_load_epi64(&searchkeys[i]);
