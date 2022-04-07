@@ -34,7 +34,9 @@ static int compare(const void *p1, const void *p2)
 int init(int64_t* data, int64_t* searches, int count)
 {
   for(int64_t i=0; i<count; i++){
-    searches[i] = random();
+    // TODO: UNDO THIS
+    searches[i] = random() % 100;
+    printf("Search: %d\n", searches[i]);
     data[i] = searches[i]+1;
   }
   qsort(data,count,sizeof(int64_t),compare);
@@ -209,8 +211,25 @@ inline void lower_bound_nb_mask_8x_AVX512(int64_t* data, int64_t size, __m512i s
   __m512i amid;
 
 
-    /* YOUR CODE HERE */
+  /* YOUR CODE HERE */
+  for(int i = 0; i < 8; i++) {
+    printf("data[%d]: %ld\n", i, data[i]);
+  }
+  unsigned char done = 0;
+  while(!done) {
+    amid = _mm512_srli_epi64(_mm512_add_epi64(aleft, aright), 1);
+    __m512i avalue = _mm512_i64gather_epi64(amid, data, 8);
+    __mmask8 comparisons = _mm512_cmplt_epi64_mask(avalue, searchkey);
 
+    aleft = _mm512_mask_blend_epi64(comparisons, aleft, _mm512_add_epi64(amid, _mm512_set1_epi64(1)));
+    aright = _mm512_mask_blend_epi64(comparisons, amid, aright);
+
+    done = _kortestz_mask8_u8(_mm512_cmplt_epi64_mask(aleft, aright), _cvtu32_mask8(0));
+    printavx("amid", amid);
+    printavx("avalue", avalue);
+    printavx("aleft", aleft);
+    printavx("aright", aright);
+  }
 }
 
 void bulk_binary_search(int64_t* data, int64_t size, int64_t* searchkeys, int64_t numsearches, int64_t* results, int repeats)
@@ -269,7 +288,7 @@ void bulk_binary_search_8x(int64_t* data, int64_t size, int64_t* searchkeys, int
       // Uncomment one of the following depending on which routine you want to profile
 
       // Algorithm A
-      lower_bound_nb_mask_8x(data,size,&searchkeys[i],&results[i]);
+      // lower_bound_nb_mask_8x(data,size,&searchkeys[i],&results[i]);
 
       /*
       for (int k = 0; k < 8; k++) {
@@ -281,8 +300,8 @@ void bulk_binary_search_8x(int64_t* data, int64_t size, int64_t* searchkeys, int
       */
 
       // Algorithm B
-      //searchkey_8x = _mm512_load_epi64(&searchkeys[i]);
-      //lower_bound_nb_mask_8x_AVX512(data,size,searchkey_8x,(__m512i*) &results[i]);
+      searchkey_8x = _mm512_load_epi64(&searchkeys[i]);
+      lower_bound_nb_mask_8x_AVX512(data,size,searchkey_8x,(__m512i*) &results[i]);
       
 #ifdef DEBUG
       printf("Result is %ld %ld %ld %ld %ld %ld %ld %ld ...\n",
