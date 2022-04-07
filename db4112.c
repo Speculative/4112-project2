@@ -104,7 +104,9 @@ inline int64_t lower_bound_nb_arithmetic(int64_t* data, int64_t size, int64_t se
     mid = (left + right)/2;   /* ignore possibility of overflow of left+right */
 
     /* YOUR CODE HERE */
-    
+    int index = data[mid] < searchkey;
+    left = left + (mid + 1 - left) * index;
+    right = mid + (right - mid) * index;
   }
   return right;
 }
@@ -127,7 +129,9 @@ inline int64_t lower_bound_nb_mask(int64_t* data, int64_t size, int64_t searchke
     mid = (left + right)/2;   /* ignore possibility of overflow of left+right */
 
     /* YOUR CODE HERE */
-
+    int64_t mask = 0 - (data[mid] < searchkey);
+    left = left & ~mask | (mid + 1) & mask;
+    right = mid & ~mask | right & mask;
   }
   return right;
 }
@@ -208,9 +212,16 @@ void bulk_binary_search(int64_t* data, int64_t size, int64_t* searchkeys, int64_
 #endif
 
       // Uncomment one of the following to measure it
-      results[i] = lower_bound(data,size,searchkeys[i]);
-      //results[i] = lower_bound_nb_arithmetic(data,size,searchkeys[i]);
-      //results[i] = lower_bound_nb_mask(data,size,searchkeys[i]);
+      // results[i] = lower_bound(data,size,searchkeys[i]);
+      // results[i] = lower_bound_nb_arithmetic(data,size,searchkeys[i]);
+      results[i] = lower_bound_nb_mask(data,size,searchkeys[i]);
+
+      /*
+      int64_t testResult = lower_bound(data,size,searchkeys[i]);
+      if (results[i] != testResult) {
+	printf("Failed search: got %d should be %d\n", results[i], testResult);
+      }
+      */
       
 #ifdef DEBUG
       printf("Result is %ld\n",results[i]);
