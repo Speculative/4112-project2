@@ -285,12 +285,14 @@ void bulk_binary_search_8x(int64_t* data, int64_t size, int64_t* searchkeys, int
       // Algorithm B
       searchkey_8x = _mm512_load_epi64(&searchkeys[i]);
       lower_bound_nb_mask_8x_AVX512(data,size,searchkey_8x,(__m512i*) &results[i]);
+      /*
       for (int k = 0; k < 8; k++) {
 	  int64_t test = lower_bound(data,size,searchkeys[i + k]);
 	  if (test != results[i + k]) {
 		printf("Got %ld, expected %ld\n", results[i+k], test);
 	  }
       }
+      */
 
 #ifdef DEBUG
       printf("Result is %ld %ld %ld %ld %ld %ld %ld %ld ...\n",
