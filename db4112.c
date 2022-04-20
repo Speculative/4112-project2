@@ -127,11 +127,9 @@ inline int64_t lower_bound_nb_mask(int64_t* data, int64_t size, int64_t searchke
   
   while(left<right) {
     mid = (left + right)/2;   /* ignore possibility of overflow of left+right */
-
-    /* YOUR CODE HERE */
-    int64_t mask = 0 - (data[mid] < searchkey);
-    left = left & ~mask | (mid + 1) & mask;
-    right = mid & ~mask | right & mask;
+    uint64_t test_mask = (data[mid]>=searchkey)-1; /* boolean 1 becomes mask of 0, boolean 0 becomes mask of 0xFFFFFFFFFFFFFFFF */
+    right=(mid&(~test_mask)) | (right&test_mask);
+    left=((mid+1)&test_mask) | (left& ~test_mask);
   }
   return right;
 }
@@ -205,21 +203,23 @@ inline void lower_bound_nb_mask_8x_AVX512(int64_t* data, int64_t size, __m512i s
   */
 
   __m512i aleft = _mm512_set1_epi64(0);
-  __m512i aright = _mm512_set1_epi64(size);
+  __m512i ones = _mm512_set1_epi64(1);
   __m512i amid;
+  __m512i aright = _mm512_set1_epi64(size); /* ignore - see Ed post */
+  __m512i amask;
+  __m512i datavec;
+  __mmask8 cmp;
 
 
-  /* YOUR CODE HERE */
-  unsigned char continuing = 1;
-  while(continuing) {
-    amid = _mm512_srli_epi64(_mm512_add_epi64(aleft, aright), 1);
-    __m512i avalue = _mm512_i64gather_epi64(amid, data, 8);
-    __mmask8 comparisons = _mm512_cmplt_epi64_mask(avalue, searchkey);
+  while(_mm512_cmplt_epi64_mask(aleft,aright)) {
+    amid = _mm512_add_epi64 (aleft,aright);
+    amid = _mm512_srli_epi64 (amid,1); // divide by 2 */
 
-    aleft = _mm512_mask_blend_epi64(comparisons, aleft, _mm512_add_epi64(amid, _mm512_set1_epi64(1)));
-    aright = _mm512_mask_blend_epi64(comparisons, amid, aright);
+    datavec = _mm512_i64gather_epi64 (amid, data, 8);
 
-    continuing = _mm512_cmplt_epi64_mask(aleft, aright);
+    cmp = _mm512_cmpge_epi64_mask (datavec, searchkey);
+    aright = _mm512_mask_blend_epi64 (cmp, aright, amid);
+    aleft = _mm512_mask_blend_epi64 (cmp, _mm512_add_epi64(amid,ones), aleft);
   }
   *result = aright;
 }
