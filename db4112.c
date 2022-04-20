@@ -17,7 +17,7 @@
 #include <immintrin.h>
 
 /* uncomment out the following line for debug info during run */
-// #define DEBUG
+#define DEBUG
 
 /* compare two int64_t values - for use with qsort */
 static int compare(const void *p1, const void *p2)
@@ -34,7 +34,8 @@ static int compare(const void *p1, const void *p2)
 int init(int64_t* data, int64_t* searches, int count)
 {
   for(int64_t i=0; i<count; i++){
-    searches[i] = random();
+    // FIXME: Revert
+    searches[i] = random() % 100;
     data[i] = searches[i]+1;
   }
   qsort(data,count,sizeof(int64_t),compare);
@@ -44,7 +45,8 @@ int init(int64_t* data, int64_t* searches, int count)
 int band_init(int64_t* outer, int64_t size)
 {
   for(int64_t i=0; i<size; i++){
-    outer[i] = random();
+    // FIXME: Revert
+    outer[i] = random() % 100;
   }
 }
 
@@ -329,8 +331,57 @@ int64_t band_join(int64_t* outer, int64_t outer_size, int64_t* inner, int64_t si
      This inner scanning code does not have to use SIMD.
   */
 
-      /* YOUR CODE HERE */
+  /* YOUR CODE HERE */
+  int64_t extras = outer_size % 8;
+  int64_t result_index = 0;
+  for (int64_t i = 0; i < outer_size - extras; i += 8) {
+    int64_t join_start[8];
+    /*
+    // Search key should be outer table value - bound
+    register __m512i searchkey_8x = _mm512_sub_epi64(
+      _mm512_load_epi64(&outer[i]),
+      _mm512_set1_epi64(bound));
 
+    lower_bound_nb_mask_8x_AVX512(inner, size, searchkey_8x, (__m512i*) join_start);
+    */
+    int64_t searchkey[8];
+    for (int64_t s = 0; s < 8; s++) {
+      searchkey[s] = outer[i + s] - bound;
+      printf("search %d: %d\n", outer[i + s], searchkey[s]);
+    }
+    lower_bound_nb_mask_8x(inner, size, searchkey, join_start);
+    
+    for (int64_t j = 0; j < 8; j++) {
+      // i is the index on the outer table
+      // start counting from join_start on the inner table
+      int64_t outer_index = i + j;
+      int64_t inner_index = join_start[j];
+      while (inner_index < size && inner[inner_index] <= outer[outer_index] + bound) {
+        outer_results[result_index] = outer_index;
+        inner_results[result_index] = inner_index;
+        result_index += 1;
+        if (result_index == result_size) {
+          return result_index;
+        }
+        inner_index += 1;
+      }
+    }
+  }
+
+  for (int64_t outer_index = outer_size - extras; outer_index < outer_size; outer_index++) {
+    int64_t inner_index = lower_bound_nb_mask(inner, size, outer[outer_index] - bound);
+    while (inner_index < size && inner[inner_index] <= outer[outer_index] + bound) {
+      outer_results[result_index] = outer_index;
+      inner_results[result_index] = inner_index;
+      result_index += 1;
+      if (result_index == result_size) {
+        return result_index;
+      }
+      inner_index += 1;
+    }
+  }
+
+  return result_index;
 }
 	 
 int64_t band_join_opt(int64_t* outer, int64_t outer_size, int64_t* inner, int64_t size, int64_t* outer_results, int64_t* inner_results, int64_t result_size, int64_t bound)
@@ -461,7 +512,8 @@ main(int argc, char *argv[])
 	   gettimeofday(&before,NULL);
 
 	   /* the code that you want to measure goes here; make a function call */
-	   bulk_binary_search(data,arraysize,queries,arraysize,results, repeats);
+     // FIXME: Revert
+	   // bulk_binary_search(data,arraysize,queries,arraysize,results, repeats);
 			      
 	   gettimeofday(&after,NULL);
 	   printf("Time in bulk_binary_search loop is %ld microseconds or %f microseconds per search\n", (after.tv_sec-before.tv_sec)*1000000+(after.tv_usec-before.tv_usec), 1.0*((after.tv_sec-before.tv_sec)*1000000+(after.tv_usec-before.tv_usec))/arraysize/repeats);
@@ -471,7 +523,8 @@ main(int argc, char *argv[])
 	   gettimeofday(&before,NULL);
 
 	   /* the code that you want to measure goes here; make a function call */
-	   bulk_binary_search_8x(data,arraysize,queries,arraysize,results, repeats);
+     // FIXME: Revert
+	   // bulk_binary_search_8x(data,arraysize,queries,arraysize,results, repeats);
 			      
 	   gettimeofday(&after,NULL);
 	   printf("Time in bulk_binary_search_8x loop is %ld microseconds or %f microseconds per search\n", (after.tv_sec-before.tv_sec)*1000000+(after.tv_usec-before.tv_usec), 1.0*((after.tv_sec-before.tv_sec)*1000000+(after.tv_usec-before.tv_usec))/arraysize/repeats);
@@ -482,7 +535,7 @@ main(int argc, char *argv[])
 
 	   /* the code that you want to measure goes here; make a function call */
 	   total_results=band_join(outer, outer_size, data, arraysize, outer_results, inner_results, result_size, bound);
-			      
+
 	   gettimeofday(&after,NULL);
 	   printf("Band join result size is %ld with an average of %f matches per output record\n",total_results, 1.0*total_results/(1.0+outer_results[total_results-1]));
 	   printf("Time in band_join loop is %ld microseconds or %f microseconds per outer record\n", (after.tv_sec-before.tv_sec)*1000000+(after.tv_usec-before.tv_usec), 1.0*((after.tv_sec-before.tv_sec)*1000000+(after.tv_usec-before.tv_usec))/outer_size);
@@ -490,7 +543,7 @@ main(int argc, char *argv[])
 #ifdef DEBUG
 	   /* show the band_join results */
 	   printf("band_join results: ");
-	   for(int64_t i=0;i<total_results;i++) printf("(%ld,%ld) ",outer_results[i],inner_results[i]);
+	   for(int64_t i=0;i<total_results;i++) printf("(%ld,%ld) ",outer[outer_results[i]],data[inner_results[i]]);
 	   printf("\n");
 #endif
 
