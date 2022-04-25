@@ -334,14 +334,12 @@ int64_t band_join(int64_t* outer, int64_t outer_size, int64_t* inner, int64_t si
   int64_t result_index = 0;
   for (int64_t i = 0; i < outer_size - extras; i += 8) {
     int64_t join_start[8];
-    /*
     // Search key should be outer table value - bound
     register __m512i searchkey_8x = _mm512_sub_epi64(
       _mm512_load_epi64(&outer[i]),
       _mm512_set1_epi64(bound));
 
     lower_bound_nb_mask_8x_AVX512(inner, size, searchkey_8x, (__m512i*) join_start);
-    */
     /*
     int64_t searchkey[8];
     for (int64_t s = 0; s < 8; s++) {
