@@ -342,12 +342,14 @@ int64_t band_join(int64_t* outer, int64_t outer_size, int64_t* inner, int64_t si
 
     lower_bound_nb_mask_8x_AVX512(inner, size, searchkey_8x, (__m512i*) join_start);
     */
+    /*
     int64_t searchkey[8];
     for (int64_t s = 0; s < 8; s++) {
       searchkey[s] = outer[i + s] - bound;
       printf("search %d: %d\n", outer[i + s], searchkey[s]);
     }
     lower_bound_nb_mask_8x(inner, size, searchkey, join_start);
+    */
     
     for (int64_t j = 0; j < 8; j++) {
       // i is the index on the outer table
