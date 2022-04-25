@@ -17,7 +17,7 @@
 #include <immintrin.h>
 
 /* uncomment out the following line for debug info during run */
-#define DEBUG
+// #define DEBUG
 
 /* compare two int64_t values - for use with qsort */
 static int compare(const void *p1, const void *p2)
@@ -34,8 +34,7 @@ static int compare(const void *p1, const void *p2)
 int init(int64_t* data, int64_t* searches, int count)
 {
   for(int64_t i=0; i<count; i++){
-    // FIXME: Revert
-    searches[i] = random() % 100;
+    searches[i] = random();
     data[i] = searches[i]+1;
   }
   qsort(data,count,sizeof(int64_t),compare);
@@ -45,8 +44,7 @@ int init(int64_t* data, int64_t* searches, int count)
 int band_init(int64_t* outer, int64_t size)
 {
   for(int64_t i=0; i<size; i++){
-    // FIXME: Revert
-    outer[i] = random() % 100;
+    outer[i] = random();
   }
 }
 
